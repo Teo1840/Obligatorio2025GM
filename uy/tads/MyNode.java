@@ -18,14 +18,10 @@ public class MyNode<K extends Comparable<K>,T> {
             return true;
         } else {
             if (this.leftchild!=null) {
-                if (this.leftchild.find(key)) {
-                    return true;
-                }
+                return this.leftchild.find(key);
             }
             if (this.rightchild!=null) {
-                if (this.rightchild.find(key)) {
-                    return true;
-                }
+                return this.rightchild.find(key);
             }
         }
         return false;

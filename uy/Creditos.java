@@ -25,17 +25,18 @@ public class Creditos {
             String actoresLimpio = limpiarJson(actoresJson);
             Type tipoListaActores = new TypeToken<List<Actor>>() {}.getType();
             List<Actor> actores = gson.fromJson(actoresLimpio, tipoListaActores);
-
             if (actores != null) {
                 for (Actor a : actores) {
-                    this.lista_actores.insert(a.getId(), a);
+                    if (a != null) {
+                        this.lista_actores.insert(a.getId(), a);
+                    }
                 }
             }
         } catch (JsonSyntaxException e) {
-            System.out.println("Error al procesar actores JSON: " + e.getMessage());
+            System.out.println("⚠️ Error parseando actores para película " + id_pelicula + ": " + e.getMessage());
         }
 
-        // --- Procesamiento de equipo de producción ---
+        // --- Procesamiento de equipo ---
         try {
             String equipoLimpio = limpiarJson(equipoJson);
             Type tipoListaEquipo = new TypeToken<List<Equipo_Produccion>>() {}.getType();
@@ -43,42 +44,45 @@ public class Creditos {
 
             if (equipo != null) {
                 for (Equipo_Produccion ep : equipo) {
-                    this.lista_equipo_produccion.insert(ep.getId(), ep);
+                    if (ep != null) { // && ep.getId() != null
+                        lista_equipo_produccion.insert(ep.getId(), ep);
+                    }
                 }
             }
-            System.out.println(this.lista_equipo_produccion.getRoot().get(16300).getName());
-            System.out.println(this.lista_equipo_produccion.getSize());
         } catch (JsonSyntaxException e) {
-            System.out.println("Error al procesar equipo JSON: " + e.getMessage());
+            System.out.println("⚠️ Error parseando equipo para película " + id_pelicula + ": " + e.getMessage());
         }
     }
 
     private String limpiarJson(String json) {
-        // Reemplaza sólo si empieza y termina con corchete y usa comillas simples por fuera
-        if (json.startsWith("[") && json.endsWith("]") && json.contains("{'")) {
-            // Reemplaza solo las comillas simples alrededor de claves y valores
-            // NO afecta comillas internas como en O'Connell
-            json = json.replaceAll("(?<=\\{|, )'(\\w+)':", "\"$1\":"); // claves
-            json = json.replaceAll(":'([^']*)'", ":\"$1\""); // valores string
+        if (json == null || json.trim().isEmpty() || json.trim().equals("null")) {
+            return "[]";
         }
-
-        // Reemplaza None por null
-        json = json.replace("None", "null");
-
         return json.trim();
     }
 
-
     public int getId_pelicula() {
         return id_pelicula;
+    }
+
+    public void setId_pelicula(int id_pelicula) {
+        this.id_pelicula = id_pelicula;
     }
 
     public MyList<Integer, Actor> getLista_actores() {
         return lista_actores;
     }
 
+    public void setLista_actores(MyList<Integer, Actor> lista_actores) {
+        this.lista_actores = lista_actores;
+    }
+
     public MyList<Integer, Equipo_Produccion> getLista_equipo_produccion() {
         return lista_equipo_produccion;
+    }
+
+    public void setLista_equipo_produccion(MyList<Integer, Equipo_Produccion> lista_equipo_produccion) {
+        this.lista_equipo_produccion = lista_equipo_produccion;
     }
 }
 

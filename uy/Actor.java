@@ -11,8 +11,7 @@ public class Actor {
     private String profile_path;
 
     // Constructor vacío requerido por Gson
-    public Actor() {
-    }
+    public Actor() {}
 
     // Getters
     public int getCast_id() {
