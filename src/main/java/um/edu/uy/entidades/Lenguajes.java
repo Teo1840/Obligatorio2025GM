@@ -1,4 +1,4 @@
-package um.edu.uy;
+package um.edu.uy.entidades;
 
 public class Lenguajes {
     private String iso_639_1;

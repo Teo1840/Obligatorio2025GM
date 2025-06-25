@@ -1,4 +1,4 @@
-package um.edu.uy;
+package um.edu.uy.entidades;
 
 public class Paises_Produccion {
     private String iso_3166_1;

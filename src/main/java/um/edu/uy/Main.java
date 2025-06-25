@@ -2,6 +2,7 @@ package um.edu.uy;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import um.edu.uy.entidades.*;
 import um.edu.uy.tads.MyList;
 import um.edu.uy.tads.MyTree;
 

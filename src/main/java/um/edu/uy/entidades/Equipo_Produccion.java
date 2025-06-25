@@ -1,4 +1,4 @@
-package um.edu.uy;
+package um.edu.uy.entidades;
 
 public class Equipo_Produccion {
     private String credit_id;

@@ -1,4 +1,4 @@
-package um.edu.uy;
+package um.edu.uy.entidades;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
