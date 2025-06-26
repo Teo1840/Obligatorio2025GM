@@ -60,7 +60,7 @@ public class Main {
             Evaluacion temp = new Evaluacion(fila[0],fila[1],fila[2],fila[3]);
             lista_evaluaciones.insert(Integer.parseInt(fila[3]),temp);
         }
-        System.out.println("ok");
+        System.out.println("vale oro");
 
         Scanner entrada = new Scanner(System.in);
         String opcion = entrada.nextLine();
@@ -83,6 +83,22 @@ public class Main {
                 System.out.print("5. Actor con más calificaciones recibidas en cada mes del año.");
                 System.out.print("6. Usuarios con más calificaciones por género");
                 System.out.print("7. Salir");
+                opcion = entrada.nextLine();
+                if (opcion=="1") {
+
+                } else if (opcion=="2") {
+
+                } else if (opcion=="3") {
+
+                } else if (opcion=="4") {
+
+                } else if (opcion=="5") {
+
+                } else if (opcion=="6") {
+
+                } else if (opcion=="7") {
+
+                }
             }
         }
     }
