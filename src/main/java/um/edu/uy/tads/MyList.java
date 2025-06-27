@@ -42,6 +42,17 @@ public class MyList<K extends Comparable<K>, T> {
         return null;
     }
 
+    public K getKeyNumber(Integer number) {
+        MyNode<K, T> temp = this.root;
+        if (number < this.size) {
+            for (int i = 0; i < number; i++) {
+                if (temp != null) temp = temp.getRightchild();
+            }
+            return temp != null ? temp.getKey() : null;
+        }
+        return null;
+    }
+
     public void insert(K key, T data) {
         if (this.root==null) {
             this.root=new MyNode<>(key,data);
@@ -85,4 +96,22 @@ public class MyList<K extends Comparable<K>, T> {
         return this.size;
     }
 
+    public void bubbleSort() {
+         int n = this.getSize(); // cantidad de nodos
+         for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - i - 1; j++) {
+                K clave1 = this.getKeyNumber(j);
+                K clave2 = this.getKeyNumber(j + 1);
+                if (clave1.compareTo(clave2) > 0) {
+                    this.intercambiar(j, j + 1); // intercambia nodos en posiciones j y j+1
+                }
+            }
+         }
+    }
+
+    private void intercambiar(int i, int j) {
+        T temp = datos[i];
+        datos[i] = datos[j];
+        datos[j] = temp;
+    }
 }

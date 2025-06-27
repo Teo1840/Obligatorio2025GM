@@ -78,7 +78,7 @@ public class Main {
                 System.out.println("Seleccione la opcion que desee:");
                 System.out.println("1. Top 5 de las mejores peliculas con mas calificaciones por idioma.");
                 System.out.println("2. Top 10 de las peliculas que mejor calificacion media tienen por parte de los usuarios.");
-                System.out.println("3. Top 5 de las colecciones que más ingresos generaron.");
+                System.out.println("3. Top 5 de las colecciones que mas ingresos generaron.");
                 System.out.println("4. Top 10 de los directores que mejor calificacion tienen.");
                 System.out.println("5. Actor con mas calificaciones recibidas en cada mes del año.");
                 System.out.println("6. Usuarios con mas calificaciones por genero");
@@ -110,5 +110,46 @@ public class Main {
                 }
             }
         }
+    }
+    public static void top5PeliculasPorIdioma() {
+        //MyHash<String, MyList<Integer, Pelicula>> peliculasPorIdioma
+//        long inicio = System.currentTimeMillis();
+//
+//        String[] idiomas = peliculasPorIdioma.keys(); // Todos los idiomas del hash
+//
+//        for (String idioma : idiomas) {
+//            MyList<Integer, Pelicula> lista = peliculasPorIdioma.get(idioma);
+//            List<Pelicula> peliculas = new ArrayList<>();
+//
+//            // Pasar todas las películas del TAD a una lista de Java para ordenar
+//            Iterador<Integer> it = lista.keys();
+//            while (it.haySiguiente()) {
+//                Integer id = it.siguiente();
+//                peliculas.add(lista.obtener(id));
+//            }
+//
+//            // Ordenar por cantidad de calificaciones (descendente)
+//            peliculas.sort((a, b) -> Integer.compare(
+//                b.getCalificaciones().size(),
+//                a.getCalificaciones().size()
+//            ));
+//
+//            // Mostrar top 5
+//            System.out.println("\nTop 5 películas del idioma: " + idioma);
+//            int limite = Math.min(5, peliculas.size());
+//            for (int i = 0; i < limite; i++) {
+//                Pelicula p = peliculas.get(i);
+//                System.out.println(
+//                    p.getId() + ", " +
+//                    p.getTitulo() + ", " +
+//                    p.getCalificaciones().size() + ", " +
+//                    idioma
+//                );
+//            }
+//        }
+//
+//        long fin = System.currentTimeMillis();
+//        System.out.println("\nTiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+//    }
     }
 }
