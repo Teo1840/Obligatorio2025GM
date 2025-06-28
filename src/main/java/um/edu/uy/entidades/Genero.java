@@ -1,12 +1,13 @@
 package um.edu.uy.entidades;
 
-public class Genero {
+public class Genero implements Comparable<Genero> {
     private int id;
     private String name;
+    private int topUserId;
+    private int topUserEvaluaciones;
+    private int evaluacionesTotales;
 
-    public Genero() {
-
-    }
+    public Genero() {}
 
     public int getId() {
         return id;
@@ -23,7 +24,37 @@ public class Genero {
     public void setName(String name) {
         this.name = name;
     }
+
+    public int getTopUserId() {
+        return topUserId;
+    }
+
+    public void setTopUserId(int topUserId) {
+        this.topUserId = topUserId;
+    }
+
+    public int getTopUserEvaluaciones() {
+        return topUserEvaluaciones;
+    }
+
+    public void setTopUserEvaluaciones(int topUserEvaluaciones) {
+        this.topUserEvaluaciones = topUserEvaluaciones;
+    }
+
+    public int getEvaluacionesTotales() {
+        return evaluacionesTotales;
+    }
+
+    public void setEvaluacionesTotales(int evaluacionesTotales) {
+        this.evaluacionesTotales = evaluacionesTotales;
+    }
+
+    @Override
+    public int compareTo(Genero otro) {
+        return Integer.compare(this.evaluacionesTotales, otro.evaluacionesTotales);
+    }
 }
+
 
 //    private MyList<Integer, Genero> lista_generos;
 //

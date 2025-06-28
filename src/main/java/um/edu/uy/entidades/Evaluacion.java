@@ -49,5 +49,11 @@ public class Evaluacion {
         this.puntacion = puntacion;
     }
 
+    public Integer getTimestamp() {
+        return Timestamp;
+    }
 
+    public void setTimestamp(Integer timestamp) {
+        Timestamp = timestamp;
+    }
 }

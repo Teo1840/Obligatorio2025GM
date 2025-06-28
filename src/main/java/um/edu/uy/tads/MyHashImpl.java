@@ -1,114 +1,85 @@
 package um.edu.uy.tads;
 
 import um.edu.uy.exeptions.ElementoNoExiste;
-import um.edu.uy.exeptions.ElementoYaExiste;
 
-public class MyHashImpl<T> implements MyHash<T>{
-    MyNode[] hashtable;
-    int size;
-    int filledBuckets;
-    boolean quadraticColition;
+public class MyHashImpl<K extends Comparable<K>, V> implements MyHash<K, V> {
+    private final int CAPACIDAD = 100;
+    private MyList<K, V>[] tabla;
 
-    MyHashImpl(int size, boolean quadraticColition) {
-        this.hashtable=new MyNode[size];
-        this.size=size;
-        this.filledBuckets=0;
-        this.quadraticColition=quadraticColition;
+    @SuppressWarnings("unchecked")
+    public MyHashImpl() {
+        tabla = new MyList[CAPACIDAD];
+        for (int i = 0; i < CAPACIDAD; i++) {
+            tabla[i] = new MyList<>();
+        }
     }
 
-    public void reestructurar() {
-        int nextPrime = 2*this.size+1;
-        int i=3;
-        while (i<=Math.sqrt(nextPrime)) {
-            if (nextPrime%i==0) {
-                nextPrime=nextPrime+2;
-                i=3;
-            }
-            i++;
-        }
-        this.size = nextPrime;
-        MyNode[] temp = this.hashtable;
-        this.hashtable = new MyNode[nextPrime];
-        for (MyNode bucket : temp) {    //reinserto todo
-            if (quadraticColition) {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(bucket.getKey().hashCode() + j*j) % this.size] == null) {
-                        hashtable[(bucket.getKey().hashCode() + j*j) % this.size] = new MyNode(bucket.getKey(),bucket.getData());
-                        return;
-                    }
-                }
-            } else {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(bucket.getKey().hashCode() + j) % this.size] == null) {
-                        hashtable[(bucket.getKey().hashCode() + j) % this.size] = new MyNode(bucket.getKey(),bucket.getData());
-                        return;
-                    }
-                }
-            }
+    private int hash(K key) {
+        return Math.abs(key.hashCode() % CAPACIDAD);
+    }
+
+    @Override
+    public void insert(K key, V value) {
+        int index = hash(key);
+        if (tabla[index].pertenece(key)) {
+            tabla[index].replace(key, key, value);
+        } else {
+            tabla[index].insert(key, value);
         }
     }
 
     @Override
-    public void insertar(String clave, Object valor) throws ElementoYaExiste {
-        if (this.filledBuckets==this.size) {
-            this.reestructurar();
-        } else if (this.pertenece(clave)){
-            throw new ElementoYaExiste();
-        } else {
-            if (quadraticColition) {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(clave.hashCode() + j*j) % this.size] == null) {
-                        hashtable[(clave.hashCode() + j*j) % this.size] = new MyNode(clave,valor);
-                        return;
-                    }
-                }
-            } else {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(clave.hashCode() + j) % this.size] == null) {
-                        hashtable[(clave.hashCode() + j) % this.size] = new MyNode(clave,valor);
-                        return;
-                    }
-                }
-            }
-        }
+    public V get(K key) throws ElementoNoExiste {
+        int index = hash(key);
+        if (!tabla[index].pertenece(key)) throw new ElementoNoExiste();
+        return tabla[index].get(key);
     }
+
     @Override
-    public boolean pertenece(String clave) {
-        if (quadraticColition) {
-            for (int j = 0; j < this.size; j++) {
-                if (hashtable[(clave.hashCode() + j*j) % this.size].getKey() == clave) {
-                    return true;
-                }
-            }
-        } else {
-            for (int j = 0; j < this.size; j++) {
-                if (hashtable[(clave.hashCode() + j) % this.size].getKey() == clave) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    public void replace(K oldKey, K newKey, V newValue) throws ElementoNoExiste {
+        int index = hash(oldKey);
+        if (!tabla[index].pertenece(oldKey)) throw new ElementoNoExiste();
+        tabla[index].replace(oldKey, newKey, newValue);
     }
+
     @Override
-    public void borrar(String clave) throws ElementoNoExiste {
-        if (this.pertenece(clave)) {
-            if (quadraticColition) {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(clave.hashCode() + j*j) % this.size].getKey() == clave) {
-                        hashtable[(clave.hashCode() + j*j) % this.size] = null;
-                        return;
-                    }
-                }
-            } else {
-                for (int j = 0; j < this.size; j++) {
-                    if (hashtable[(clave.hashCode() + j) % this.size].getKey() == clave) {
-                        hashtable[(clave.hashCode() + j) % this.size] = null;
-                        return;
-                    }
-                }
-            }
-        } else {
-            throw new ElementoNoExiste();
+    public int getSize() {
+        int total = 0;
+        for (MyList<K, V> lista : tabla) {
+            total += lista.getSize();
         }
+        return total;
     }
+
+    @Override
+    public K getKey(int index) {
+        int count = 0;
+        for (MyList<K, V> lista : tabla) {
+            if (index < count + lista.getSize()) {
+                return lista.getKeyNumber(index - count);
+            }
+            count += lista.getSize();
+        }
+        return null;
+    }
+
+    @Override
+    public V getValue(int index) {
+        int count = 0;
+        for (MyList<K, V> lista : tabla) {
+            if (index < count + lista.getSize()) {
+                return lista.getNumber(index - count);
+            }
+            count += lista.getSize();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean pertenece(K key) {
+        int index = hash(key);
+        if (tabla[index] == null) return false;
+        return tabla[index].pertenece(key);
+    }
+
 }

@@ -1,5 +1,7 @@
 package um.edu.uy.tads;
 
+import um.edu.uy.exeptions.ElementoNoExiste;
+
 public class MyList<K extends Comparable<K>, T> {
     private MyNode<K, T> root;
     private int size;
@@ -14,7 +16,7 @@ public class MyList<K extends Comparable<K>, T> {
         while (temp != null) {
             int cmp = key.compareTo(temp.getKey());
             if (cmp == 0) return temp.getData();
-            else if (cmp < 0) temp = temp.getLeftchild();
+            //else if (cmp < 0) temp = temp.getLeftchild();
             else temp = temp.getRightchild();
         }
         return null;
@@ -25,7 +27,7 @@ public class MyList<K extends Comparable<K>, T> {
         while (temp != null) {
             int cmp = key.compareTo(temp.getKey());
             if (cmp == 0) return temp;
-            else if (cmp < 0) temp = temp.getLeftchild();
+            //else if (cmp < 0) temp = temp.getLeftchild();
             else temp = temp.getRightchild();
         }
         return null;
@@ -78,7 +80,7 @@ public class MyList<K extends Comparable<K>, T> {
         while (temp != null) {
             int cmp = key.compareTo(temp.getKey());
             if (cmp == 0) return true;
-            else if (cmp < 0) temp = temp.getLeftchild();
+            //else if (cmp < 0) temp = temp.getLeftchild();
             else temp = temp.getRightchild();
         }
         return false;
@@ -110,8 +112,21 @@ public class MyList<K extends Comparable<K>, T> {
     }
 
     private void intercambiar(int i, int j) {
-        T temp = datos[i];
-        datos[i] = datos[j];
-        datos[j] = temp;
+        //T temp = datos[i];
+        //datos[i] = datos[j];
+        //datos[j] = temp;
+    }
+
+    public void replace(K oldKey, K newKey, T newData) {
+        MyNode<K, T> actual = this.root;
+        while (actual != null) {
+            if (actual.getKey().equals(oldKey)) {
+                actual.setKey(newKey);
+                actual.setData(newData);
+                return;
+            }
+            actual = actual.getRightchild();
+        }
+        throw new ElementoNoExiste();
     }
 }
