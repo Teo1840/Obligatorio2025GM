@@ -2,12 +2,21 @@ package um.edu.uy.tads;
 
 import um.edu.uy.exeptions.ElementoNoExiste;
 
+// Capacidad: idealmente ~2x el número esperado de entradas y número primo para reducir colisiones.
+// Con capacidad 100 y miles de claves, todos los buckets se convierten en listas largas
+// y las búsquedas degeneran a O(n). Para el dataset completo (~45k películas, 1M ratings)
+// usar al menos 50000. Para pruebas pequeñas, 101 es suficiente.
 public class MyHashImpl<K extends Comparable<K>, V> implements MyHash<K, V> {
-    private final int CAPACIDAD = 100;
+    private final int CAPACIDAD;
     private MyList<K, V>[] tabla;
 
-    @SuppressWarnings("unchecked")
     public MyHashImpl() {
+        this(101);
+    }
+
+    @SuppressWarnings("unchecked")
+    public MyHashImpl(int capacidad) {
+        this.CAPACIDAD = capacidad;
         tabla = new MyList[CAPACIDAD];
         for (int i = 0; i < CAPACIDAD; i++) {
             tabla[i] = new MyList<>();
@@ -81,5 +90,4 @@ public class MyHashImpl<K extends Comparable<K>, V> implements MyHash<K, V> {
         if (tabla[index] == null) return false;
         return tabla[index].pertenece(key);
     }
-
 }

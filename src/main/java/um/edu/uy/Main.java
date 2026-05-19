@@ -1,11 +1,13 @@
 package um.edu.uy;
 
-import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import um.edu.uy.consultas.*;
+import um.edu.uy.consultas.Carga;
+import um.edu.uy.consultas.Consultas;
 import um.edu.uy.entidades.*;
-import um.edu.uy.exeptions.ElementoNoExiste;
 import um.edu.uy.tads.*;
+
+import java.io.IOException;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws IOException, CsvValidationException {
@@ -16,60 +18,69 @@ public class Main {
         MyList<String, Lenguajes> lista_lenguajes = new MyList<>();
         MyHash<Integer, Genero> lista_generos = new MyHashImpl<>();
         MyList<Integer, Evaluacion> lista_evaluaciones = new MyList<>();
-        MyList<Integer, Paises_Produccion> lista_paises = new MyList<>();
-        MyList<Integer, Productora> lista_productoras = new MyList<>();
-        MyList<Integer, Actor> lista_actores = new MyList<>();
-        MyList<Integer, Equipo_Produccion> lista_equipo = new MyList<>();
 
         Scanner entrada = new Scanner(System.in);
-        String opcion = "0";
-        while (Integer.parseInt(opcion) != 3) {
-            System.out.println("Bienvenido a UMovie");
+        int opcion = 0;
+
+        while (opcion != 3) {
+            System.out.println("\nBienvenido a UMovie");
             System.out.println("MENU PRINCIPAL:");
-            System.out.println("Seleccione la opcion que desee:");
             System.out.println("1. Carga de Datos");
             System.out.println("2. Ejecutar Consultas");
             System.out.println("3. Salir");
-            opcion = entrada.nextLine();
-            if (Integer.parseInt(opcion) == 1) {
-                Carga.carga();
 
+            try {
+                opcion = Integer.parseInt(entrada.nextLine().trim());
+            } catch (NumberFormatException e) {
+                System.out.println("Opcion invalida. Ingrese un numero.");
+                continue;
             }
-            if (Integer.parseInt(opcion) == 2) {
 
-                System.out.println("Seleccione la opcion que desee:");
+            if (opcion == 1) {
+                Carga.carga(lista_peliculas, lista_creditos, lista_sagas, lista_lenguajes, lista_generos, lista_evaluaciones);
+
+            } else if (opcion == 2) {
+                System.out.println("\nSeleccione la opcion que desee:");
                 System.out.println("1. Top 5 de las mejores peliculas con mas calificaciones por idioma.");
                 System.out.println("2. Top 10 de las peliculas que mejor calificacion media tienen por parte de los usuarios.");
                 System.out.println("3. Top 5 de las colecciones que mas ingresos generaron.");
                 System.out.println("4. Top 10 de los directores que mejor calificacion tienen.");
-                System.out.println("5. Actor con mas calificaciones recibidas en cada mes del año.");
-                System.out.println("6. Usuarios con mas calificaciones por genero");
-                System.out.println("7. Salir");
-                opcion = entrada.nextLine();
-                Consultas consultas = new Consultas();
-                if (Integer.parseInt(opcion) == 1) {
-                    consultas.top5PeliculasMasCalificadasPorIdioma(lista_peliculas, lista_evaluaciones);
-                } else if (Integer.parseInt(opcion) == 2) {
-                    consultas.top10PeliculasMejorCalificadas(lista_peliculas, lista_evaluaciones);
-                } else if (Integer.parseInt(opcion) == 3) {
-                    consultas.top5ColeccionesMasIngresos(lista_peliculas);
-                } else if (Integer.parseInt(opcion) == 4) {
-                    consultas.top10DirectoresMejorCalificados(lista_creditos, lista_evaluaciones);
-                } else if (Integer.parseInt(opcion) == 5) {
-                    MyHash<Integer, Creditos> hash_creditos = new MyHashImpl<>();
-                    for (int i = 0; i < lista_creditos.getSize(); i++) {
-                        Creditos c = lista_creditos.getNumber(i);
-                        hash_creditos.insert(c.getId_pelicula(), c);
-                    }
-                    consultas.actorConMasCalificacionesPorMes(lista_evaluaciones, hash_creditos);
-                } else if (Integer.parseInt(opcion) == 6) {
-                    consultas.topUsuariosPorGenero(lista_generos);
-                } else if (Integer.parseInt(opcion) == 7) {
-                    System.out.println("Saliendo...");
+                System.out.println("5. Actor con mas calificaciones recibidas en cada mes del año.");
+                System.out.println("6. Usuarios con mas calificaciones por genero.");
+                System.out.println("7. Volver");
+
+                int subOpcion;
+                try {
+                    subOpcion = Integer.parseInt(entrada.nextLine().trim());
+                } catch (NumberFormatException e) {
+                    System.out.println("Opcion invalida.");
+                    continue;
                 }
+
+                switch (subOpcion) {
+                    case 1 -> Consultas.top5PeliculasMasCalificadasPorIdioma(lista_peliculas, lista_evaluaciones);
+                    case 2 -> Consultas.top10PeliculasMejorCalificadas(lista_peliculas, lista_evaluaciones);
+                    case 3 -> Consultas.top5ColeccionesMasIngresos(lista_peliculas);
+                    case 4 -> Consultas.top10DirectoresMejorCalificados(lista_creditos, lista_evaluaciones);
+                    case 5 -> {
+                        MyHash<Integer, Creditos> hash_creditos = new MyHashImpl<>();
+                        for (int i = 0; i < lista_creditos.getSize(); i++) {
+                            Creditos c = lista_creditos.getNumber(i);
+                            hash_creditos.insert(c.getId_pelicula(), c);
+                        }
+                        Consultas.actorConMasCalificacionesPorMes(lista_evaluaciones, hash_creditos);
+                    }
+                    case 6 -> Consultas.topUsuariosPorGenero(lista_generos);
+                    case 7 -> System.out.println("Volviendo al menu principal...");
+                    default -> System.out.println("Opcion invalida.");
+                }
+
+            } else if (opcion != 3) {
+                System.out.println("Opcion invalida.");
             }
         }
+
+        System.out.println("Hasta luego!");
+        entrada.close();
     }
 }
-
-

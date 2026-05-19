@@ -14,10 +14,8 @@ public class MyList<K extends Comparable<K>, T> {
     public T get(K key) {
         MyNode<K, T> temp = this.root;
         while (temp != null) {
-            int cmp = key.compareTo(temp.getKey());
-            if (cmp == 0) return temp.getData();
-            //else if (cmp < 0) temp = temp.getLeftchild();
-            else temp = temp.getRightchild();
+            if (key.compareTo(temp.getKey()) == 0) return temp.getData();
+            temp = temp.getRightchild();
         }
         return null;
     }
@@ -25,12 +23,10 @@ public class MyList<K extends Comparable<K>, T> {
     public MyNode<K, T> getNode(K key) {
         MyNode<K, T> temp = this.root;
         while (temp != null) {
-            int cmp = key.compareTo(temp.getKey());
-            if (cmp == 0) return temp;
-            //else if (cmp < 0) temp = temp.getLeftchild();
-            else temp = temp.getRightchild();
+            if (key.compareTo(temp.getKey()) == 0) return temp;
+            temp = temp.getRightchild();
         }
-        return null;
+        throw new ElementoNoExiste();
     }
 
     public T getNumber(Integer number) {
@@ -56,8 +52,16 @@ public class MyList<K extends Comparable<K>, T> {
     }
 
     public void insert(K key, T data) {
-        if (this.root==null) {
-            this.root=new MyNode<>(key,data);
+        MyNode<K, T> existing = this.root;
+        while (existing != null) {
+            if (key.compareTo(existing.getKey()) == 0) {
+                existing.setData(data);
+                return;
+            }
+            existing = existing.getRightchild();
+        }
+        if (this.root == null) {
+            this.root = new MyNode<>(key, data);
         } else {
             this.root.insert(key, data);
         }
@@ -67,9 +71,9 @@ public class MyList<K extends Comparable<K>, T> {
     public void delete(K key) {
         if (this.root != null) {
             if (this.root.getKey().compareTo(key) == 0) {
-                this.root = this.root.getRightchild(); // elimina raíz
+                this.root = this.root.getRightchild();
             } else {
-                this.root.delete(key); // delega al hijo
+                this.root.delete(key);
             }
             this.size--;
         }
@@ -78,43 +82,10 @@ public class MyList<K extends Comparable<K>, T> {
     public boolean pertenece(K key) {
         MyNode<K, T> temp = this.root;
         while (temp != null) {
-            int cmp = key.compareTo(temp.getKey());
-            if (cmp == 0) return true;
-            //else if (cmp < 0) temp = temp.getLeftchild();
-            else temp = temp.getRightchild();
+            if (key.compareTo(temp.getKey()) == 0) return true;
+            temp = temp.getRightchild();
         }
         return false;
-    }
-
-    public void setRoot(MyNode<K, T> root) {
-        this.root = root;
-    }
-
-    public MyNode<K, T> getRoot() {
-        return this.root;
-    }
-
-    public int getSize() {
-        return this.size;
-    }
-
-    public void bubbleSort() {
-         int n = this.getSize(); // cantidad de nodos
-         for (int i = 0; i < n - 1; i++) {
-            for (int j = 0; j < n - i - 1; j++) {
-                K clave1 = this.getKeyNumber(j);
-                K clave2 = this.getKeyNumber(j + 1);
-                if (clave1.compareTo(clave2) > 0) {
-                    this.intercambiar(j, j + 1); // intercambia nodos en posiciones j y j+1
-                }
-            }
-         }
-    }
-
-    private void intercambiar(int i, int j) {
-        //T temp = datos[i];
-        //datos[i] = datos[j];
-        //datos[j] = temp;
     }
 
     public void replace(K oldKey, K newKey, T newData) {
@@ -128,5 +99,40 @@ public class MyList<K extends Comparable<K>, T> {
             actual = actual.getRightchild();
         }
         throw new ElementoNoExiste();
+    }
+
+    public void swap(int i, int j) {
+        if (i == j) return;
+        MyNode<K, T> nodeI = null, nodeJ = null;
+        MyNode<K, T> temp = this.root;
+        int idx = 0;
+        while (temp != null) {
+            if (idx == i) nodeI = temp;
+            if (idx == j) nodeJ = temp;
+            temp = temp.getRightchild();
+            idx++;
+        }
+        if (nodeI == null || nodeJ == null) return;
+        K tmpKey = nodeI.getKey();
+        T tmpData = nodeI.getData();
+        nodeI.setKey(nodeJ.getKey());
+        nodeI.setData(nodeJ.getData());
+        nodeJ.setKey(tmpKey);
+        nodeJ.setData(tmpData);
+    }
+
+    public void setRoot(MyNode<K, T> root) { this.root = root; }
+    public MyNode<K, T> getRoot() { return this.root; }
+    public int getSize() { return this.size; }
+
+    public void bubbleSort() {
+        int n = this.getSize();
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - i - 1; j++) {
+                if (this.getKeyNumber(j).compareTo(this.getKeyNumber(j + 1)) > 0) {
+                    this.swap(j, j + 1);
+                }
+            }
+        }
     }
 }

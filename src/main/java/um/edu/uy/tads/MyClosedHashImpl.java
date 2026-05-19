@@ -1,209 +1,148 @@
 package um.edu.uy.tads;
 
-import um.edu.uy.adt.list.MyList;
-import um.edu.uy.adt.list.linked.MyLinkedListImpl;
+import um.edu.uy.exeptions.ElementoNoExiste;
 
-public class MyClosedHashImpl<K,T> implements MyHash<K,T> {
-
-
-
-    private HashEntry<K,T>[] hashArray;
+// Tabla hash con direccionamiento cerrado (closed hashing / open addressing).
+// Resuelve colisiones por sondeo lineal (linear=true) o cuadrático (linear=false).
+// Se redimensiona cuando el factor de carga supera 0.5 (más bajo que chaining
+// porque el clustering degrada más rápido en direccionamiento abierto).
+public class MyClosedHashImpl<K extends Comparable<K>, V> implements MyHash<K, V> {
+    private Object[] keys;
+    private Object[] values;
+    private boolean[] deleted;
+    private int capacidad;
     private int size;
-    private boolean linear;
-    private float chargeFactor;
+    private final boolean linear;
+    private static final float FACTOR_CARGA = 0.5f;
 
-
-    public MyClosedHashImpl(int size, boolean linear){
-        this.hashArray = (HashEntry<K,T>[]) new HashEntry[getNextPrimeNumber(size-1)];
-        this.linear = linear;
-        this.size = 0;
-        this.chargeFactor = 0.5f;
+    public MyClosedHashImpl() {
+        this(101, true);
     }
 
-
-    public MyClosedHashImpl(int size, boolean linear, float chargeFactor) {
-        this.hashArray = (HashEntry<K,T>[]) new HashEntry[getNextPrimeNumber(size-1)];
+    public MyClosedHashImpl(int capacidad, boolean linear) {
+        this.capacidad = siguientePrimo(capacidad);
+        this.keys = new Object[this.capacidad];
+        this.values = new Object[this.capacidad];
+        this.deleted = new boolean[this.capacidad];
         this.size = 0;
         this.linear = linear;
-        this.chargeFactor = chargeFactor;
     }
 
+    private int sondeo(int keyHash, int i) {
+        int base = Math.abs(keyHash % capacidad);
+        return linear ? (base + i) % capacidad : (base + i * i) % capacidad;
+    }
 
     @Override
-    public synchronized void put(K key, T value) {
-
-        if (((float) this.size + 1) / ((float) hashArray.length) > this.chargeFactor ){
-            this.reHashing();
-        }
-
-
-        int iterations = 0;
+    public void insert(K key, V value) {
+        if ((float)(size + 1) / capacidad > FACTOR_CARGA) rehashing();
         int keyHash = key.hashCode();
-
-        int position = getPosition(keyHash, iterations);
-
-        while (!(hashArray[position] == null || hashArray[position].getKey().equals(key) || iterations  > hashArray.length || hashArray[position].isDeleted() ) ) {
-            iterations++;
-            position = getPosition(keyHash,iterations);
-
-        }
-
-        if (iterations <= hashArray.length) {
-            if (hashArray[position] != null && !hashArray[position].isDeleted()) {
-                this.size--;
+        for (int i = 0; i < capacidad; i++) {
+            int pos = sondeo(keyHash, i);
+            if (keys[pos] == null || deleted[pos]) {
+                keys[pos] = key;
+                values[pos] = value;
+                deleted[pos] = false;
+                size++;
+                return;
             }
-            hashArray[position] = new HashEntry<>(key, value);
-            this.size++;
+            if (keys[pos].equals(key)) {
+                values[pos] = value;
+                return;
+            }
         }
-
-
-
-
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public synchronized  T remove(K key) {
-        T valueToReturn = null;
-        int iterations = 0;
+    public V get(K key) throws ElementoNoExiste {
         int keyHash = key.hashCode();
-
-        int position = getPosition(keyHash, iterations);
-
-        while (!(hashArray[position] == null || hashArray[position].getKey().equals(key) || iterations  > hashArray.length || hashArray[position].isDeleted())) {
-            iterations++;
-            position = getPosition(keyHash, iterations);
+        for (int i = 0; i < capacidad; i++) {
+            int pos = sondeo(keyHash, i);
+            if (keys[pos] == null) throw new ElementoNoExiste();
+            if (!deleted[pos] && keys[pos].equals(key)) return (V) values[pos];
         }
-
-        if (iterations <= hashArray.length && !(hashArray[position] == null) && !(hashArray[position].isDeleted())){
-            valueToReturn = hashArray[position].getValue();
-            hashArray[position].setDeleted(true);
-            this.size--;
-        }
-        return valueToReturn;
+        throw new ElementoNoExiste();
     }
 
     @Override
-    public synchronized T get(K key) {
-        T valueToReturn = null;
-        int iterations = 0;
-        int keyHash = key.hashCode();
-
-        int position = getPosition(keyHash, iterations);
-
-
-        if (hashArray[position] == null){
-            return null;
+    public void replace(K oldKey, K newKey, V newValue) throws ElementoNoExiste {
+        int keyHash = oldKey.hashCode();
+        for (int i = 0; i < capacidad; i++) {
+            int pos = sondeo(keyHash, i);
+            if (keys[pos] == null) throw new ElementoNoExiste();
+            if (!deleted[pos] && keys[pos].equals(oldKey)) {
+                keys[pos] = newKey;
+                values[pos] = newValue;
+                return;
+            }
         }
-
-        while (!(hashArray[position] == null || hashArray[position].getKey().equals(key) || iterations  > hashArray.length)) {
-            iterations++;
-            position = getPosition(keyHash, iterations);
-        }
-
-        if (hashArray[position] != null && iterations < hashArray.length && !(hashArray[position].isDeleted())){
-            valueToReturn = hashArray[position].getValue();
-        }
-        return valueToReturn;
+        throw new ElementoNoExiste();
     }
 
     @Override
-    public int size() {
-        return this.size;
+    public boolean pertenece(K key) {
+        try { get(key); return true; } catch (ElementoNoExiste e) { return false; }
     }
 
     @Override
-    public MyList<T> getValues() {
-        int updates = 0;
-        MyList<T> list = new MyLinkedListImpl<>();
-        for (int i = 0; i<this.hashArray.length; i++){
-            if (hashArray[i] != null && !hashArray[i].isDeleted()){
-                list.add(hashArray[i].getValue());
-                updates++;
-            }
-            if (updates == this.size){
-                break;
-            }
-        }
-        return list;
+    public int getSize() {
+        return size;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public T[] getValuesArray() {
-        int updates = 0;
-        T[] vector = (T[]) new Object[size];
-
-        for (int i = 0; i< this.hashArray.length; i++){
-            if (hashArray[i] != null && !hashArray[i].isDeleted()){
-                vector[updates] = hashArray[i].getValue();
-                updates++;
-            }
-            if (updates == this.size){
-                break;
+    public K getKey(int index) {
+        int count = 0;
+        for (int i = 0; i < capacidad; i++) {
+            if (keys[i] != null && !deleted[i]) {
+                if (count == index) return (K) keys[i];
+                count++;
             }
         }
-
-        return vector;
+        return null;
     }
 
-
-
-    private int getPosition(int keyHash, int iterations){
-        int position = 0;
-        if (linear){
-            position = (keyHash % hashArray.length + iterations) % hashArray.length;
-        }else{
-            position = (keyHash % hashArray.length + (int) Math.pow(iterations,2)) % hashArray.length;
-        }
-        return position;
-    }
-
-    private void reHashing(){
-
-        int newLength = getNextPrimeNumber(this.hashArray.length * 2);
-
-        HashEntry<K,T>[] oldHash = hashArray;
-        this.hashArray = (HashEntry<K,T>[]) new HashEntry[newLength];
-        int oldSize = size;
-
-        int updates = 0;
-
-        for(int i = 0; i<oldHash.length;i++){
-            if (oldHash[i] != null && !oldHash[i].isDeleted() ){
-                put(oldHash[i].getKey(),oldHash[i].getValue());
-                updates++;
-            }
-            if (updates >= oldSize){
-                break;
-            }
-
-        }
-
-        this.size = oldSize;
-    }
-
-    private int getNextPrimeNumber(int number){
-        int numberToReturn = number + 1;
-
-        while(isNotPrime(numberToReturn)){
-            numberToReturn++;
-        }
-
-        return numberToReturn;
-    }
-
-    private boolean isNotPrime(int number){
-
-        boolean isNotPrime = false;
-
-        for (int i=2; i<number-1; i++){
-            if (number % i == 0){
-                isNotPrime = true;
-                break;
+    @SuppressWarnings("unchecked")
+    @Override
+    public V getValue(int index) {
+        int count = 0;
+        for (int i = 0; i < capacidad; i++) {
+            if (keys[i] != null && !deleted[i]) {
+                if (count == index) return (V) values[i];
+                count++;
             }
         }
-
-        return isNotPrime;
+        return null;
     }
 
+    @SuppressWarnings("unchecked")
+    private void rehashing() {
+        Object[] oldKeys = keys;
+        Object[] oldValues = values;
+        boolean[] oldDeleted = deleted;
+        int oldCapacidad = capacidad;
+        capacidad = siguientePrimo(capacidad * 2);
+        keys = new Object[capacidad];
+        values = new Object[capacidad];
+        deleted = new boolean[capacidad];
+        size = 0;
+        for (int i = 0; i < oldCapacidad; i++) {
+            if (oldKeys[i] != null && !oldDeleted[i]) {
+                insert((K) oldKeys[i], (V) oldValues[i]);
+            }
+        }
+    }
 
+    private int siguientePrimo(int n) {
+        int candidate = n + 1;
+        while (!esPrimo(candidate)) candidate++;
+        return candidate;
+    }
+
+    private boolean esPrimo(int n) {
+        if (n < 2) return false;
+        for (int i = 2; i * i <= n; i++) if (n % i == 0) return false;
+        return true;
+    }
 }

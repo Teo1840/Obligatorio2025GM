@@ -3,98 +3,81 @@ package um.edu.uy.consultas;
 import um.edu.uy.entidades.*;
 import um.edu.uy.exeptions.*;
 import um.edu.uy.tads.*;
-import um.edu.uy.tads.MyHash;
 
 import java.util.Calendar;
 
-
 public class Consultas {
-    //Consulta 1 <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-<-<-<
+
+    // Consulta 1: top 5 películas más calificadas agrupadas por idioma original
     public static void top5PeliculasMasCalificadasPorIdioma(MyList<Integer, Pelicula> peliculas, MyList<Integer, Evaluacion> evaluaciones) {
         long inicio = System.currentTimeMillis();
 
-        MyList<Integer, Integer> contadorCalificaciones = new MyList<>();
-        for (int i = 0; i < peliculas.getSize(); i++) {
-            int id = peliculas.getNumber(i).getId();
-            contadorCalificaciones.insert(id, 0);
-        }
-
+        // Contar calificaciones por película
+        MyHash<Integer, Integer> cuentaPorPelicula = new MyHashImpl<>();
         for (int i = 0; i < evaluaciones.getSize(); i++) {
-            int idPelicula = evaluaciones.getNumber(i).getIdPelicula();
-            try {
-                int actual = contadorCalificaciones.getNode(idPelicula).getData();
-                contadorCalificaciones.getNode(idPelicula).setData(actual + 1);
-            } catch (ElementoNoExiste error) {
+            int id = evaluaciones.getNumber(i).getIdPelicula();
+            if (cuentaPorPelicula.pertenece(id)) {
+                try { cuentaPorPelicula.replace(id, id, cuentaPorPelicula.get(id) + 1); }
+                catch (ElementoNoExiste e) {}
+            } else {
+                cuentaPorPelicula.insert(id, 1);
             }
         }
 
-        class PeliculaIdioma {
-            int id;
-            String titulo;
-            int total;
-            String idioma;
-
-            public PeliculaIdioma(int id, String titulo, int total, String idioma) {
-                this.id = id;
-                this.titulo = titulo;
-                this.total = total;
-                this.idioma = idioma;
+        // Agrupar películas por idioma original: idioma → lista de (movieId → count)
+        MyHash<String, MyList<Integer, Integer>> peliculasPorIdioma = new MyHashImpl<>();
+        for (int i = 0; i < peliculas.getSize(); i++) {
+            Pelicula p = peliculas.getNumber(i);
+            String idioma = p.getIdiomaOriginal();
+            if (idioma == null || idioma.isEmpty()) continue;
+            if (!peliculasPorIdioma.pertenece(idioma)) {
+                peliculasPorIdioma.insert(idioma, new MyList<>());
             }
+            int count = 0;
+            try { count = cuentaPorPelicula.get(p.getId()); } catch (ElementoNoExiste e) {}
+            try { peliculasPorIdioma.get(idioma).insert(p.getId(), count); } catch (ElementoNoExiste e) {}
         }
 
-        MyList<Integer, PeliculaIdioma> resumen = new MyList<>();
+        // Para cada idioma, ordenar y mostrar top 5
+        for (int l = 0; l < peliculasPorIdioma.getSize(); l++) {
+            String idioma = peliculasPorIdioma.getKey(l);
+            MyList<Integer, Integer> lista = peliculasPorIdioma.getValue(l);
+            int limit = Math.min(5, lista.getSize());
 
-        for (int i = 0; i < contadorCalificaciones.getSize(); i++) {
-            int id = contadorCalificaciones.getKeyNumber(i);
-            int total = contadorCalificaciones.getNumber(i);
-            try {
-                Pelicula peli = peliculas.getNode(id).getData();
-                String idioma = "?";
-                if (peli.getLista_lenguajes_hablados() != null && peli.getLista_lenguajes_hablados().getSize() > 0) {
-                    idioma = peli.getLista_lenguajes_hablados().getNumber(0).getName();
+            for (int i = 0; i < limit; i++) {
+                int maxIdx = i;
+                for (int j = i + 1; j < lista.getSize(); j++) {
+                    if (lista.getNumber(j) > lista.getNumber(maxIdx)) maxIdx = j;
                 }
-                resumen.insert(id, new PeliculaIdioma(id, peli.getTitulo_ingles(), total, idioma));
-            } catch (ElementoNoExiste e) {
-                resumen.insert(id, new PeliculaIdioma(id, "Desconocido", total, "?"));
+                lista.swap(i, maxIdx);
             }
-        }
 
-        for (int i = 0; i < Math.min(5, resumen.getSize()); i++) {
-            int maxIndex = i;
-            for (int j = i + 1; j < resumen.getSize(); j++) {
-                if (resumen.getNumber(j).total > resumen.getNumber(maxIndex).total) {
-                    maxIndex = j;
-                }
+            System.out.println("Idioma: " + idioma);
+            for (int i = 0; i < limit; i++) {
+                int movieId = lista.getKeyNumber(i);
+                Pelicula p = peliculas.get(movieId);
+                String titulo = (p != null) ? p.getTitulo_ingles() : "Desconocido";
+                System.out.printf("  %d, %s, %d%n", movieId, titulo, lista.getNumber(i));
             }
-            if (i != maxIndex) {
-                PeliculaIdioma temp = resumen.getNumber(i);
-                resumen.replace(resumen.getKeyNumber(i), resumen.getKeyNumber(maxIndex), resumen.getNumber(maxIndex));
-                resumen.replace(resumen.getKeyNumber(maxIndex), resumen.getKeyNumber(i), temp);
-            }
-        }
-
-        for (int i = 0; i < Math.min(5, resumen.getSize()); i++) {
-            PeliculaIdioma p = resumen.getNumber(i);
-            System.out.printf("%d, %s, %d, %s%n", p.id, p.titulo, p.total, p.idioma);
         }
 
         long fin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+        System.out.println("Tiempo de ejecucion de la consulta: " + (fin - inicio) + " ms");
     }
 
-    //Consulta 2 <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-<-<-<
+    // Consulta 2: top 10 películas con mejor calificación promedio
     public static void top10PeliculasMejorCalificadas(MyList<Integer, Pelicula> peliculas, MyList<Integer, Evaluacion> evaluaciones) {
         long inicio = System.currentTimeMillis();
 
-        MyList<Integer, Double[]> acumulados = new MyList<>();
+        MyHash<Integer, Double[]> acumulados = new MyHashImpl<>();
         for (int i = 0; i < peliculas.getSize(); i++) {
-            Pelicula p = peliculas.getNumber(i);
-            acumulados.insert(p.getId(), new Double[]{0.0, 0.0});
+            acumulados.insert(peliculas.getNumber(i).getId(), new Double[]{0.0, 0.0});
         }
         for (int j = 0; j < evaluaciones.getSize(); j++) {
             Evaluacion e = evaluaciones.getNumber(j);
+            if (!acumulados.pertenece(e.getIdPelicula())) continue;
             try {
-                Double[] datos = acumulados.getNode(e.getIdPelicula()).getData();
+                Double[] datos = acumulados.get(e.getIdPelicula());
                 datos[0] += e.getPuntacion();
                 datos[1]++;
             } catch (ElementoNoExiste ex) {}
@@ -102,293 +85,225 @@ public class Consultas {
 
         MyList<Integer, Double> promedios = new MyList<>();
         for (int i = 0; i < acumulados.getSize(); i++) {
-            int id = acumulados.getKeyNumber(i);
-            Double[] datos = acumulados.getNumber(i);
-            if (datos[1] > 0) {
-                double promedio = datos[0] / datos[1];
-                promedios.insert(id, promedio);
-            }
+            Double[] datos = acumulados.getValue(i);
+            if (datos[1] > 0) promedios.insert(acumulados.getKey(i), datos[0] / datos[1]);
         }
 
-        for (int i = 0; i < Math.min(10, promedios.getSize()); i++) {
-            int max = i;
+        int limit = Math.min(10, promedios.getSize());
+        for (int i = 0; i < limit; i++) {
+            int maxIdx = i;
             for (int j = i + 1; j < promedios.getSize(); j++) {
-                if (promedios.getNumber(j) > promedios.getNumber(max)) {
-                    max = j;
-                }
+                if (promedios.getNumber(j) > promedios.getNumber(maxIdx)) maxIdx = j;
             }
-            if (i != max) {
-                double tempVal = promedios.getNumber(i);
-                int tempKey = promedios.getKeyNumber(i);
-                promedios.replace(promedios.getKeyNumber(i), promedios.getKeyNumber(max), promedios.getNumber(max));
-                promedios.replace(promedios.getKeyNumber(max), tempKey, tempVal);
-            }
+            promedios.swap(i, maxIdx);
         }
 
-        for (int i = 0; i < Math.min(10, promedios.getSize()); i++) {
+        for (int i = 0; i < limit; i++) {
             int id = promedios.getKeyNumber(i);
-            double promedio = promedios.getNumber(i);
-            try {
-                Pelicula p = peliculas.getNode(id).getData();
-                System.out.printf("%d, %s, %.2f%n", id, p.getTitulo_ingles(), promedio);
-            } catch (ElementoNoExiste e) {
-                System.out.printf("%d, Título desconocido, %.2f%n", id, promedio);
-            }
+            Pelicula p = peliculas.get(id);
+            String titulo = (p != null) ? p.getTitulo_ingles() : "Desconocido";
+            System.out.printf("%d, %s, %.2f%n", id, titulo, promedios.getNumber(i));
         }
 
         long fin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+        System.out.println("Tiempo de ejecucion de la consulta: " + (fin - inicio) + " ms");
     }
 
-    // Consulta 3 <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-<-<-<
+    // Consulta 3: top 5 colecciones/sagas con más ingresos totales
     public static void top5ColeccionesMasIngresos(MyList<Integer, Pelicula> peliculas) {
         long inicio = System.currentTimeMillis();
 
+        // saga id → [ingresoTotal, cantPeliculas]
         MyHash<Integer, Double[]> colecciones = new MyHashImpl<>();
-
         for (int i = 0; i < peliculas.getSize(); i++) {
             Pelicula p = peliculas.getNumber(i);
-            if (p.getSaga() != null) {
-                int id = p.getSaga().getId();
+            if (p.getSaga() == null) continue;
+            int id = p.getSaga().getId();
+            if (colecciones.pertenece(id)) {
                 try {
                     Double[] data = colecciones.get(id);
                     data[0] += p.getIngreso();
                     data[1]++;
-                    colecciones.replace(id, id, data);
-                } catch (ElementoNoExiste e) {
-                    colecciones.insert(id, new Double[]{p.getIngreso(), 1.0});
-                }
+                } catch (ElementoNoExiste e) {}
+            } else {
+                colecciones.insert(id, new Double[]{p.getIngreso(), 1.0});
             }
         }
 
         MyList<Integer, Double> ingresos = new MyList<>();
         for (int i = 0; i < colecciones.getSize(); i++) {
-            int id = colecciones.getKey(i);
-            Double[] data = colecciones.getValue(i);
-            ingresos.insert(id, data[0]);
+            ingresos.insert(colecciones.getKey(i), colecciones.getValue(i)[0]);
         }
 
-        for (int i = 0; i < Math.min(5, ingresos.getSize()); i++) {
-            int max = i;
+        int limit = Math.min(5, ingresos.getSize());
+        for (int i = 0; i < limit; i++) {
+            int maxIdx = i;
             for (int j = i + 1; j < ingresos.getSize(); j++) {
-                if (ingresos.getNumber(j) > ingresos.getNumber(max)) {
-                    max = j;
-                }
+                if (ingresos.getNumber(j) > ingresos.getNumber(maxIdx)) maxIdx = j;
             }
-            if (i != max) {
-                double tempVal = ingresos.getNumber(i);
-                int tempKey = ingresos.getKeyNumber(i);
-                ingresos.replace(ingresos.getKeyNumber(i), ingresos.getKeyNumber(max), ingresos.getNumber(max));
-                ingresos.replace(ingresos.getKeyNumber(max), tempKey, tempVal);
-            }
+            ingresos.swap(i, maxIdx);
         }
 
-        for (int i = 0; i < Math.min(5, ingresos.getSize()); i++) {
+        for (int i = 0; i < limit; i++) {
             int id = ingresos.getKeyNumber(i);
-            double ingresoTotal = ingresos.getNumber(i);
-            Double cantidadPeliculas = colecciones.get(id)[1];
-            String tituloColeccion = "Colección desconocida";
-            MyList<Integer, Integer> idsPeliculas = new MyList<>();
-
+            String tituloSaga = "Coleccion desconocida";
+            StringBuilder ids = new StringBuilder();
             for (int j = 0; j < peliculas.getSize(); j++) {
                 Pelicula p = peliculas.getNumber(j);
                 if (p.getSaga() != null && p.getSaga().getId() == id) {
-                    if (tituloColeccion.equals("Colección desconocida")) {
-                        tituloColeccion = p.getSaga().getName();
-                    }
-                    idsPeliculas.insert(p.getId(), p.getId());
+                    if (tituloSaga.equals("Coleccion desconocida")) tituloSaga = p.getSaga().getName();
+                    if (ids.length() > 0) ids.append("|");
+                    ids.append(p.getId());
                 }
             }
-
-            System.out.printf("%d, %s, %.0f, %s, %.2f%n", id, tituloColeccion, cantidadPeliculas, idsPeliculas.toString(), ingresoTotal);
+            double cant = 0;
+            try { cant = colecciones.get(id)[1]; } catch (ElementoNoExiste e) {}
+            System.out.printf("%d, %s, %.0f, %s, %.2f%n", id, tituloSaga, cant, ids, ingresos.getNumber(i));
         }
 
         long fin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+        System.out.println("Tiempo de ejecucion de la consulta: " + (fin - inicio) + " ms");
     }
-    // Consulta 4: Top 10 directores con mejor calificación promedio   <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-
+
+    // Consulta 4: top 10 directores con mejor calificación promedio
     public static void top10DirectoresMejorCalificados(MyList<Integer, Creditos> creditos, MyList<Integer, Evaluacion> evaluaciones) {
         long inicio = System.currentTimeMillis();
 
-        MyHash<String, Double[]> acumulador = new MyHashImpl<>(); // clave: nombreDirector, valor[0]: suma calificaciones, valor[1]: cantidad
-
         MyHash<Integer, String> peliculaADirector = new MyHashImpl<>();
-
         for (int i = 0; i < creditos.getSize(); i++) {
             Creditos c = creditos.getNumber(i);
             MyList<Integer, Equipo_Produccion> equipo = c.getLista_equipo_produccion();
             for (int j = 0; j < equipo.getSize(); j++) {
                 Equipo_Produccion ep = equipo.getNumber(j);
                 if (ep.getJob() != null && ep.getJob().equalsIgnoreCase("Director")) {
-                    String nombre = ep.getName();
-                    peliculaADirector.insert(c.getId_pelicula(), nombre);
-                    break; // solo un director por película
+                    peliculaADirector.insert(c.getId_pelicula(), ep.getName());
+                    break;
                 }
             }
         }
 
+        // director → [sumaCalificaciones, cantidad]
+        MyHash<String, Double[]> acumulador = new MyHashImpl<>();
         for (int i = 0; i < evaluaciones.getSize(); i++) {
             Evaluacion e = evaluaciones.getNumber(i);
+            if (!peliculaADirector.pertenece(e.getIdPelicula())) continue;
             try {
                 String director = peliculaADirector.get(e.getIdPelicula());
-                Double[] datos = acumulador.pertenece(director) ? acumulador.get(director) : new Double[]{0.0, 0.0};
-                datos[0] += e.getPuntacion();
-                datos[1]++;
-                acumulador.replace(director, director, datos);
-            } catch (ElementoNoExiste ex) {
-                // sin director, ignorar
-            }
+                if (acumulador.pertenece(director)) {
+                    Double[] datos = acumulador.get(director);
+                    datos[0] += e.getPuntacion();
+                    datos[1]++;
+                } else {
+                    acumulador.insert(director, new Double[]{e.getPuntacion(), 1.0});
+                }
+            } catch (ElementoNoExiste ex) {}
         }
 
         MyList<String, Double> promedios = new MyList<>();
         for (int i = 0; i < acumulador.getSize(); i++) {
-            String nombre = acumulador.getKey(i);
             Double[] datos = acumulador.getValue(i);
-            if (datos[1] > 0) {
-                promedios.insert(nombre, datos[0] / datos[1]);
-            }
+            if (datos[1] > 0) promedios.insert(acumulador.getKey(i), datos[0] / datos[1]);
         }
 
-        for (int i = 0; i < Math.min(10, promedios.getSize()); i++) {
-            int max = i;
+        int limit = Math.min(10, promedios.getSize());
+        for (int i = 0; i < limit; i++) {
+            int maxIdx = i;
             for (int j = i + 1; j < promedios.getSize(); j++) {
-                if (promedios.getNumber(j) > promedios.getNumber(max)) {
-                    max = j;
-                }
+                if (promedios.getNumber(j) > promedios.getNumber(maxIdx)) maxIdx = j;
             }
-            if (i != max) {
-                double tempVal = promedios.getNumber(i);
-                String tempKey = promedios.getKeyNumber(i);
-                promedios.replace(promedios.getKeyNumber(i), promedios.getKeyNumber(max), promedios.getNumber(max));
-                promedios.replace(promedios.getKeyNumber(max), tempKey, tempVal);
-            }
+            promedios.swap(i, maxIdx);
         }
 
-        for (int i = 0; i < Math.min(10, promedios.getSize()); i++) {
-            System.out.printf("%s, %.2f\n", promedios.getKeyNumber(i), promedios.getNumber(i));
+        for (int i = 0; i < limit; i++) {
+            System.out.printf("%s, %.2f%n", promedios.getKeyNumber(i), promedios.getNumber(i));
         }
 
         long fin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+        System.out.println("Tiempo de ejecucion de la consulta: " + (fin - inicio) + " ms");
     }
 
-
-    // Consulta 5 <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-<-<-<<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-
+    // Consulta 5: actor con más calificaciones recibidas en cada mes del año
     public static void actorConMasCalificacionesPorMes(MyList<Integer, Evaluacion> evaluaciones, MyHash<Integer, Creditos> lista_creditos) {
         long inicio = System.currentTimeMillis();
 
+        // mes → (actor → cantidad)
         MyHash<Integer, MyHash<String, Integer>> contador = new MyHashImpl<>();
 
         for (int i = 0; i < evaluaciones.getSize(); i++) {
             Evaluacion e = evaluaciones.getNumber(i);
-            int timestamp = e.getTimestamp();
+            if (!lista_creditos.pertenece(e.getIdPelicula())) continue;
 
-            // Convertir timestamp a mes (0 = enero, 11 = diciembre)
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis((long) timestamp * 1000);
-            int mes = calendar.get(Calendar.MONTH);
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis((long) e.getTimestamp() * 1000);
+            int mes = cal.get(Calendar.MONTH);
 
             try {
                 Creditos c = lista_creditos.get(e.getIdPelicula());
-                if (c.getLista_actores() != null) {
-                    for (int j = 0; j < c.getLista_actores().getSize(); j++) {
-                        String nombreActor = c.getLista_actores().getNumber(j).getName();
-
-                        // Obtener sub-hash del mes
-                        MyHash<String, Integer> actoresMes;
-                        try {
-                            actoresMes = contador.get(mes);
-                        } catch (ElementoNoExiste ex) {
-                            actoresMes = new MyHashImpl<>();
-                            contador.insert(mes, actoresMes);
-                        }
-
-                        // Sumar calificación
-                        int cantidad = actoresMes.pertenece(nombreActor) ? actoresMes.get(nombreActor) : 0;
-                        actoresMes.replace(nombreActor, nombreActor, cantidad + 1);
+                if (c.getLista_actores() == null) continue;
+                for (int j = 0; j < c.getLista_actores().getSize(); j++) {
+                    String nombreActor = c.getLista_actores().getNumber(j).getName();
+                    if (!contador.pertenece(mes)) contador.insert(mes, new MyHashImpl<>());
+                    MyHash<String, Integer> actoresMes;
+                    try { actoresMes = contador.get(mes); } catch (ElementoNoExiste ex) { continue; }
+                    if (actoresMes.pertenece(nombreActor)) {
+                        try { actoresMes.replace(nombreActor, nombreActor, actoresMes.get(nombreActor) + 1); }
+                        catch (ElementoNoExiste ex) {}
+                    } else {
+                        actoresMes.insert(nombreActor, 1);
                     }
                 }
-            } catch (ElementoNoExiste ignored) {}
+            } catch (ElementoNoExiste ex) {}
         }
 
-        // Imprimir resultados
         for (int mes = 0; mes < 12; mes++) {
+            if (!contador.pertenece(mes)) continue;
             try {
                 MyHash<String, Integer> actores = contador.get(mes);
                 String topActor = null;
-                int maxCalificaciones = 0;
-
+                int maxCal = 0;
                 for (int i = 0; i < actores.getSize(); i++) {
-                    String actor = actores.getKey(i);
-                    int calificaciones = actores.getValue(i);
-                    if (calificaciones > maxCalificaciones) {
-                        topActor = actor;
-                        maxCalificaciones = calificaciones;
-                    }
+                    int cal = actores.getValue(i);
+                    if (cal > maxCal) { topActor = actores.getKey(i); maxCal = cal; }
                 }
-
-                if (topActor != null) {
-                    System.out.printf("%d, %s, ?, %d%n", mes + 1, topActor, maxCalificaciones); // mes+1 para mostrar 1–12
-                }
-
-            } catch (ElementoNoExiste ignored) {}
+                if (topActor != null) System.out.printf("%d, %s, %d%n", mes + 1, topActor, maxCal);
+            } catch (ElementoNoExiste ex) {}
         }
 
         long fin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (fin - inicio) + " ms");
+        System.out.println("Tiempo de ejecucion de la consulta: " + (fin - inicio) + " ms");
     }
 
-    // Consulta 6 <-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<--<-<-<-<<--<<-<-<<<<<-<-<-<--<--<<--<<--<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<--<-<-<-<-<-<-<-<-<
+    // Consulta 6: usuario con más calificaciones por género
     public static void topUsuariosPorGenero(MyHash<Integer, Genero> generos) {
         long tiempoInicio = System.currentTimeMillis();
 
-        HeapImpl<Genero> heapGeneros = new HeapImpl<>(generos.getSize(), true);
-
-        MyList<Integer, Integer> generoIds = new MyList<>();
-
-        for (int i = 0; i < generos.getSize(); i++) {
-            int clave = generos.getKey(i);
-            generoIds.insert(clave, clave);
+        if (generos.getSize() == 0) {
+            System.out.println("No hay generos cargados.");
+            return;
         }
 
-        for (int i = 0; i < generoIds.getSize(); i++) {
-            Genero genero = generos.get(generoIds.getNumber(i));
-            if (heapGeneros.size() < 10) {
-                heapGeneros.insert(genero);
-            } else if (genero.getEvaluacionesTotales() > heapGeneros.get().getEvaluacionesTotales()) {
-                heapGeneros.delete();
-                heapGeneros.insert(genero);
+        HeapImpl<Genero> heap = new HeapImpl<>(generos.getSize(), true);
+        for (int i = 0; i < generos.getSize(); i++) {
+            Genero g = generos.getValue(i);
+            if (heap.size() < 10) {
+                heap.insert(g);
+            } else if (g.getEvaluacionesTotales() > heap.get().getEvaluacionesTotales()) {
+                heap.delete();
+                heap.insert(g);
             }
         }
 
-        MyList<Genero, Genero> top10Generos = new MyList<>();
-        while (heapGeneros.size() > 0) {
-            Genero g = heapGeneros.delete();
-            top10Generos.insert(g, g);
+        MyList<Genero, Genero> top = new MyList<>();
+        while (heap.size() > 0) {
+            Genero g = heap.delete();
+            top.insert(g, g);
         }
-        for (int i = 0; i < top10Generos.getSize(); i++) {
-            Genero genero = top10Generos.getNumber(i);
-            System.out.println(genero.getTopUserId() + ", " +
-                    genero.getName() + ", " +
-                    genero.getTopUserEvaluaciones());
+        for (int i = 0; i < top.getSize(); i++) {
+            Genero g = top.getNumber(i);
+            System.out.println(g.getTopUserId() + ", " + g.getName() + ", " + g.getTopUserEvaluaciones());
         }
 
         long tiempoFin = System.currentTimeMillis();
-        System.out.println("Tiempo de ejecución de la consulta: " + (tiempoFin - tiempoInicio) + " ms");
-    }
-
-}
-// Crear lista auxiliar con idioma
-class PeliculaIdioma {
-    int id;
-    String titulo;
-    int total;
-    String idioma;
-
-    public PeliculaIdioma(int id, String titulo, int total, String idioma) {
-        this.id = id;
-        this.titulo = titulo;
-        this.total = total;
-        this.idioma = idioma;
+        System.out.println("Tiempo de ejecucion de la consulta: " + (tiempoFin - tiempoInicio) + " ms");
     }
 }
